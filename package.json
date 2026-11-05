@@ -1,0 +1,10 @@
+{
+  "name": "evidenceos-inference-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Deterministic, evidence-oriented repository claim analysis",
+  "type": "module",
+  "bin": { "evidenceos": "./src/cli.js" },
+  "scripts": { "test": "node --test", "analyze": "node src/cli.js analyze", "score": "node src/cli.js score" },
+  "engines": { "node": ">=22" }
+}

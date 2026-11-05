@@ -1,84 +1,76 @@
 # EvidenceOS Inference Engine
 
-**Status:** Specification-led · Implementation incomplete  
-**Spec version:** 0.10  
+**Status:** Initial runnable implementation · experimental  
+**Spec version:** 0.10 (implementation baseline 0.1.0)  
 **Owner:** No-Gas-Labs-Official
 
 ## What this is
 
-An inference engine for **repository intelligence**: automated analysis of codebases to extract concepts, score evidence quality, and produce auditable judgments about what a repository actually contains versus what it claims.
+An inference engine for **repository intelligence**: it extracts a bounded set of claims from a repository README, matches discriminating claim terms against traceable repository paths, classifies supporting artifacts, and emits machine-readable evidence and gaps.
 
 It implements the EvidenceOS design orientation:
 
 - Prefer primary artifacts over narrative
-- Score claims against observable structure
-- Separate *what the repo says* from *what the repo proves*
-- Emit outputs that can be challenged, not merely summarized
+- Separate what a repository claims from what its visible structure supports
+- Attach every inferred support item to a path and content hash
+- Emit gaps and limitations rather than filling them with invented conclusions
+- Keep the method deterministic and versioned
 
-## Why it exists
+## Run
 
-Most repository “intelligence” tools summarize README language and file trees. That collapses claim and evidence.
+Requires Node.js 22 or newer. No third-party runtime dependencies are required.
 
-EvidenceOS is intended to answer harder questions:
-
-| Question | Not answered by | Target of this engine |
-|----------|-----------------|------------------------|
-| Does this repo implement what the README describes? | Keyword match | Structure + path + test presence scoring |
-| Is a methodology *practiced* or only *named*? | Brand search | Behavioral / artifact co-occurrence |
-| Which files are primary evidence vs decoration? | File count | Classification + weight |
-
-## Scope (v0.10)
-
-In scope:
-
-- Concept extraction from repo trees and text artifacts
-- Evidence scoring (claim ↔ supporting path)
-- Machine-readable report objects
-
-Out of scope (for now):
-
-- Full CI integration as a product
-- Guaranteed accuracy on private or adversarial repos
-- Political or campaign analysis
-
-## Current state (honest)
-
-This repository currently holds the **design surface and security baseline**. Runnable inference modules, fixtures, and scored example reports are not yet complete in-tree.
-
-If you clone this repo expecting a finished CLI today, you will be disappointed. Treat v0.10 as a **contract for implementation**, not a shipping product.
-
-## Intended interface (target)
-
-```text
-evidenceos analyze <repo-path> --out report.json
-evidenceos score  <report.json> --claim "implements flash loans"
+```sh
+npm test
+node src/cli.js analyze /path/to/repository --out report.json
+node src/cli.js score report.json --claim "implements flash loan execution"
 ```
 
-Report objects should include:
+Optional analysis arguments:
 
-- `claims[]` with text + origin
-- `evidence[]` with path + weight + note
-- `gaps[]` for claims without support
-- `method` field naming the scoring version
+- `--label name`: stable human-readable repository label
+- `--claim "text"`: include a score for one additional claim in the report
+- `--out file.json`: write JSON to a file instead of standard output
 
-## Security
+## Report contract
 
-See [SECURITY.md](./SECURITY.md). Do not feed this engine secrets. Analysis should run on published or intentionally shared trees.
+The analyzer emits `evidenceos-inference-report/v1` with:
 
-## Contributing
+- `claims[]`: extracted README claim, origin path/line, score, matched terms, supporting paths, and gaps
+- `evidence[]`: repository-relative path, artifact class, byte size, and SHA-256
+- `gaps[]`: explicit claim/evidence gaps
+- `method`: versioned method identifier
+- `trace_id`: digest derived from the sorted evidence manifest
+- `limitations[]`: current method boundaries
 
-Priority order for contributions:
+## Scoring method 0.1.0
 
-1. Fixture repos with known claim/evidence pairs
-2. Deterministic scorers with unit tests
-3. CLI surface matching the target interface above
-4. Documentation of failure modes
+The initial scorer is deliberately modest and deterministic. It compares claim terms to repository paths, weights implementation/test/configuration/documentation paths differently, and emits a 0–100 path-support heuristic.
 
-Pull requests that only expand mythology without tests will be declined.
+**The score is not a probability, semantic confidence, or proof.** File presence does not prove that code works. Test files are not executed. See [docs/METHOD.md](docs/METHOD.md).
 
-## License
+## Security and boundaries
 
-See repository license files if present; otherwise treat as proprietary to No-Gas-Labs-Official until explicitly dual-licensed.
+- Skips symbolic links and common generated/dependency directories.
+- Reads only allowlisted text/code file extensions.
+- Ignores files larger than 1 MiB and caps the inventory at 20,000 files.
+- Does not execute repository code, install dependencies, or make network requests.
+- Do not analyze secret-bearing trees unless they are intentionally approved for local inspection.
+
+## Current limitations
+
+- Automatic claims are extracted only from README lines containing a small set of verbs.
+- Evidence matching is lexical and path-based, not semantic source analysis.
+- Tests are identified by path convention but are not run.
+- It does not inspect runtime behavior, deployments, Git history, customer demand, unit economics, or legal/compliance status.
+- Human review of underlying artifacts remains mandatory.
+
+## Next implementation priorities
+
+1. Expand fixture repositories with known claim/evidence pairs and adversarial cases.
+2. Add stronger deterministic artifact classifiers and evidence scoring.
+3. Validate the report contract against portfolio-level EvidenceOS consumers.
+4. Add semantic analysis only behind explicit, separately testable methods with provenance and uncertainty.
 
 ---
 
