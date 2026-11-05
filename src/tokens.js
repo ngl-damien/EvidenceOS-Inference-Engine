@@ -11,8 +11,9 @@ const STOP = new Set([
 ]);
 
 export function tokenize(value) {
-  return [...new Set(String(value).toLowerCase()
+  return [...new Set(String(value)
     .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .toLowerCase()
     .split(/[^a-z0-9]+/)
     .filter((token) => token.length >= 3 && !STOP.has(token)))];
 }
